@@ -16,13 +16,16 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final BruteForceProtectionService bruteForceProtectionService;
     private final FacadeUserService facadeUserService;
+    private final ClipCascadeProperties clipCascadeProperties;
 
     public CustomAuthenticationSuccessHandler(
             BruteForceProtectionService bruteForceProtectionService,
-            FacadeUserService facadeUserService) {
+            FacadeUserService facadeUserService,
+            ClipCascadeProperties clipCascadeProperties) {
 
         this.bruteForceProtectionService = bruteForceProtectionService;
         this.facadeUserService = facadeUserService;
+        this.clipCascadeProperties = clipCascadeProperties;
     }
 
     @Override
@@ -37,7 +40,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         // save ip details to the database
         facadeUserService.setLoginDetails(authentication.getName(), ipDetails);
 
-        // Redirect to the home page
-        response.sendRedirect("/");
+        // Redirect to the configured post-login URL (default: the home page "/")
+        response.sendRedirect(clipCascadeProperties.getLoginSuccessUrl());
     }
 }

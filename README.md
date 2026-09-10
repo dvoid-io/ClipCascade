@@ -150,6 +150,7 @@ To deploy the ClipCascade server on any operating system that supports Java 21 o
     | `CC_ALLOWED_ORIGINS`         | Specifies the allowed CORS origins for secure cross-origin access.                                   | `*`               | `https://clipcascade.example.com` |
     | `CC_P2P_ENABLED`             | Enables or disables peer-to-peer mode. When enabled, `CC_MAX_MESSAGE_SIZE_IN_MiB` is ignored.        | `false`           | `true`                            |
     | `CC_SIGNUP_ENABLED`          | Allows or restricts user self-registration.                                                          | `false`           | `false`                           |
+    | `CC_LOGIN_SUCCESS_URL`       | Path the form-login success handler redirects to. Set to an un-gated path (e.g. `/health`) when `/` is behind a reverse-proxy/SSO gate. | `/`               | `/health`                         |
     | `CC_PORT`                    | Specifies the port on which the server listens for incoming connections.                             | `8080`            | `1234`                            |
    
 3. **Start the Server**  
