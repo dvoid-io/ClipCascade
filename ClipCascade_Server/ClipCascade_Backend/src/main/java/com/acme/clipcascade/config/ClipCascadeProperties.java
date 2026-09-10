@@ -86,6 +86,24 @@ public class ClipCascadeProperties {
     private long maxUserAccounts;
 
     /*
+     * Username of the admin account seeded when the users table is empty
+     * (default: admin). Read only on that first start; it has no effect on an
+     * existing database. Blank or with leading/trailing spaces falls back to
+     * the default.
+     */
+    @Value("${CC_ADMIN_USERNAME:admin}")
+    private String adminUsername;
+
+    /*
+     * Password of the admin account seeded when the users table is empty
+     * (default: admin123). Plain text, exactly as it will be typed into a
+     * client; the server hashes it. Read only on that first start. Blank falls
+     * back to the default. Never included in toString().
+     */
+    @Value("${CC_ADMIN_PASSWORD:admin123}")
+    private String adminPassword;
+
+    /*
      * Flag to enable or disable logging of brute force tracker on shutdown
      * (default: false)
      */
@@ -339,6 +357,14 @@ public class ClipCascadeProperties {
         return maxUserAccounts;
     }
 
+    public String getAdminUsername() {
+        return adminUsername;
+    }
+
+    public String getAdminPassword() {
+        return adminPassword;
+    }
+
     public boolean isLogBruteForceTrackerEnabled() {
         return logBruteForceTrackerEnabled;
     }
@@ -472,6 +498,7 @@ public class ClipCascadeProperties {
                 ",\n lockTimeoutScalingFactor='" + getLockTimeoutScalingFactor() + "'" +
                 ",\n accountPurgeTimeoutSeconds='" + getAccountPurgeTimeoutSeconds() + "'" +
                 ",\n maxUserAccounts='" + getMaxUserAccounts() + "'" +
+                ",\n adminUsername='" + getAdminUsername() + "'" +
                 ",\n logBruteForceTrackerEnabled='" + isLogBruteForceTrackerEnabled() + "'" +
                 ",\n externalBrokerEnabled='" + isExternalBrokerEnabled() + "'" +
                 ",\n brokerHost='" + getBrokerHost() + "'" +

@@ -68,6 +68,12 @@ services:
       # # Default: false
       # - CC_SIGNUP_ENABLED=false
 
+      # # ⚙️ Admin account created on the first start, when the users table is empty.
+      # # Only read while seeding; the default password is public, so set it before the first start.
+      # # Default: admin / admin123
+      # - CC_ADMIN_USERNAME=admin
+      # - CC_ADMIN_PASSWORD=admin123
+
       # # ⚙️ Sets the maximum number of user accounts that can be created on the server.
       # # Set to -1 for unlimited accounts.
       # # Default: -1 (unlimited)

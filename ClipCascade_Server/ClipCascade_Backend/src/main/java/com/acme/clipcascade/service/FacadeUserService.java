@@ -3,6 +3,7 @@ package com.acme.clipcascade.service;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.acme.clipcascade.config.ClipCascadeProperties;
@@ -14,12 +15,15 @@ import com.acme.clipcascade.utils.IpAddressResolver;
 import com.acme.clipcascade.utils.TimeUtility;
 import com.acme.clipcascade.utils.UserValidator;
 
+import ch.qos.logback.classic.Logger;
+
 @Service
 public class FacadeUserService {
 
     private final UserService userService;
     private final UserInfoService userInfoService;
     private final ClipCascadeProperties clipCascadeProperties;
+    private final Logger logger;
 
     public FacadeUserService(
             UserService userService,
@@ -29,17 +33,32 @@ public class FacadeUserService {
         this.userService = userService;
         this.userInfoService = userInfoService;
         this.clipCascadeProperties = clipCascadeProperties;
+        this.logger = (Logger) LoggerFactory.getLogger(FacadeUserService.class);
     }
 
     public void insertDefaultAdminUserIfEmpty() {
         if (userService.isTableEmpty()) {
+            String username = clipCascadeProperties.getAdminUsername();
+            if (!UserValidator.isValidUsername(username)) {
+                username = "admin";
+            }
+
+            // plain text; doubleHashAndCreateUser applies the client-side
+            // SHA3-512 layer itself before the stored bcrypt hash
+            String password = clipCascadeProperties.getAdminPassword();
+            if (password == null || password.isBlank()) {
+                password = "admin123";
+            }
+
             userService.doubleHashAndCreateUser(
-                    "admin",
-                    "admin123",
+                    username,
+                    password,
                     RoleConstants.ADMIN,
                     true);
 
-            userInfoService.registerNewUser("admin");
+            userInfoService.registerNewUser(username);
+
+            logger.info("Users table was empty; seeded admin user '{}'", username);
         }
     }
 
