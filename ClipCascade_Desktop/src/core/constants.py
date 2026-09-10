@@ -176,8 +176,14 @@ elif PLATFORM.startswith(LINUX):
 
 
 # core constants
-RECONNECT_WS_TIMER = 10  # seconds
+RECONNECT_WS_TIMER = 10  # seconds; first auto-reconnect delay
+RECONNECT_WS_TIMER_MAX = 60  # seconds; delay doubles per failed attempt up to this cap
 WEBSOCKET_TIMEOUT = 3000  # milliseconds
+
+# STOMP WebSocket keepalive (RFC 6455 ping/pong): keeps an idle connection open through
+# proxies and detects a dead socket (e.g. after sleep) without waiting on a server frame.
+STOMP_WS_PING_INTERVAL_SEC = 25
+STOMP_WS_PING_TIMEOUT_SEC = 20
 
 # P2P signaling WebSocket keepalive (RFC 6455 ping/pong).
 P2P_WS_PING_INTERVAL_SEC = 25
