@@ -1051,6 +1051,33 @@ Defines the STOMP broker password for external message handling.
   <td>-1</td>
 </tr>
 
+<!-- 35 -->
+<tr>
+  <td>CC_ADMIN_USERNAME</td>
+  <td>
+    Username of the admin account created on first start, when the users table is empty.
+    <br><br>
+    <strong>Note:</strong><br>
+    - Only read while seeding; it has no effect on an existing database.<br>
+    - Blank falls back to the default.
+  </td>
+  <td>admin</td>
+</tr>
+
+<!-- 36 -->
+<tr>
+  <td>CC_ADMIN_PASSWORD</td>
+  <td>
+    Password of the admin account created on first start, when the users table is empty.
+    <br><br>
+    <strong>Note:</strong><br>
+    - Plain text, exactly as it will be typed into a client; the server hashes it.<br>
+    - Only read while seeding; change it later from the admin panel.<br>
+    - Blank falls back to the default. The default is public, so set this before the first start.
+  </td>
+  <td>admin123</td>
+</tr>
+
 </tbody>
 </table>
 
