@@ -24,17 +24,20 @@ public class SecurityConfiguration {
 	private final BCryptPasswordEncoder bCryptPasswordEncoder;
 	private final BruteForceProtectionService bruteForceProtectionService;
 	private final FacadeUserService facadeUserService;
+	private final ClipCascadeProperties clipCascadeProperties;
 
 	SecurityConfiguration(
 			UserDetailsService userDetailsService,
 			BCryptPasswordEncoder bCryptPasswordEncoder,
 			BruteForceProtectionService bruteForceProtectionService,
-			FacadeUserService facadeUserService) {
+			FacadeUserService facadeUserService,
+			ClipCascadeProperties clipCascadeProperties) {
 
 		this.userDetailsService = userDetailsService;
 		this.bCryptPasswordEncoder = bCryptPasswordEncoder;
 		this.bruteForceProtectionService = bruteForceProtectionService;
 		this.facadeUserService = facadeUserService;
+		this.clipCascadeProperties = clipCascadeProperties;
 	}
 
 	// SessionRegistry bean to store session information
@@ -71,7 +74,8 @@ public class SecurityConfiguration {
 						.successHandler(
 								new CustomAuthenticationSuccessHandler(
 										bruteForceProtectionService,
-										facadeUserService))) // <- Custom authentication success handler
+										facadeUserService,
+										clipCascadeProperties))) // <- Custom authentication success handler
 				.logout(logout -> logout
 						.logoutUrl("/logout") // The URL to submit a logout request
 						.logoutSuccessUrl("/login?logout")) // Where to go after successful logout

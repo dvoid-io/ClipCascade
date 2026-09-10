@@ -295,6 +295,17 @@ public class ClipCascadeProperties {
     @Value("${CC_DONATIONS_ENABLED:false}")
     private boolean donationsEnabled;
 
+    /*
+     * Path the form-login success handler redirects to (default: /).
+     * The default lands on the home page, unchanged behaviour. Set to an
+     * un-gated path (for example /health) when the server sits behind a
+     * reverse proxy or SSO gate that only permits authenticated access to /,
+     * so a native or scripted client following the post-login redirect is not
+     * bounced to the gate and does not read that bounce as a failed login.
+     */
+    @Value("${CC_LOGIN_SUCCESS_URL:/}")
+    private String loginSuccessUrl;
+
     private long getMessageSizeInBytes() {
         /*
          * Note: Ensure that the same logic is applied in the activemq.xml file as well.
@@ -485,6 +496,10 @@ public class ClipCascadeProperties {
         return donationsEnabled;
     }
 
+    public String getLoginSuccessUrl() {
+        return loginSuccessUrl;
+    }
+
     @Override
     public String toString() {
         return "{\n" +
@@ -519,6 +534,7 @@ public class ClipCascadeProperties {
                 ",\n p2pStunUrl='" + getP2pStunUrl() + "'" +
                 ",\n maxWsGlobalConnections='" + getMaxWsGlobalConnections() + "'" +
                 ",\n maxWsConnectionsPerUser='" + getMaxWsConnectionsPerUser() + "'" +
+                ",\n loginSuccessUrl='" + getLoginSuccessUrl() + "'" +
                 "\n}";
     }
 
