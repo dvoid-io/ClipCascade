@@ -12,6 +12,7 @@ import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import com.acme.clipcascade.service.BruteForceProtectionService;
 import com.acme.clipcascade.service.FacadeUserService;
@@ -84,6 +85,11 @@ public class SecurityConfiguration {
 						.maximumSessions(-1) // Allow unlimited sessions
 						.sessionRegistry(sessionRegistry()) // Use the session registry
 						.expiredSessionStrategy(new CustomExpiredSession())) // Custom expired session strategy
+				// Reverse-proxy SSO for the web panel — inert unless
+				// CC_TRUSTED_HEADER_AUTH=true (see TrustedHeaderAuthenticationFilter)
+				.addFilterBefore(
+						new TrustedHeaderAuthenticationFilter(clipCascadeProperties, userDetailsService),
+						UsernamePasswordAuthenticationFilter.class)
 				.build();
 	}
 
