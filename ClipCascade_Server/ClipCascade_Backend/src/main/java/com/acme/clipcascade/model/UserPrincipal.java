@@ -14,7 +14,14 @@ public class UserPrincipal implements UserDetails {
 
     private Users user;
 
-    private final BruteForceProtectionService bruteForceProtectionService;
+    /* transient: this is a live Spring bean, and UserDetails ends up inside the
+       serialized SecurityContext whenever sessions are stored outside the heap
+       (Spring Session JDBC/Redis, or Tomcat's own persistence). Serializing it
+       throws NotSerializableException and every login 500s. Lockout is an
+       AUTHENTICATION-time concern — by the time a session is being restored the
+       credential check has already happened — so a null after deserialization
+       is correct, not a hole. */
+    private final transient BruteForceProtectionService bruteForceProtectionService;
 
     public UserPrincipal(
             Users user,
@@ -26,6 +33,13 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
+
+        // Restored from a serialized session: the brute-force tracker is
+        // transient and the credential check it guards already happened at
+        // login, so there is nothing to re-validate here.
+        if (bruteForceProtectionService == null) {
+            return true;
+        }
 
         // validate attempt using brute force protection
         return bruteForceProtectionService.recordAndValidateAttempt(user.getUsername());

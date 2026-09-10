@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "users")
-public class Users {
+public class Users implements java.io.Serializable {
 
     @Id
     @NotNull(message = "Username is required") // Validation constraint at application level
