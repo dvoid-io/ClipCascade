@@ -38,6 +38,18 @@
 	</properties>
 
 	<dependencies>
+		<!-- Durable HTTP sessions. Tomcat's in-memory manager loses every
+		     session when the process dies, which on a container platform means
+		     every deploy or restart logs out every client; its file-based
+		     persistence only writes at graceful context stop, so a hard kill
+		     still loses them. Spring Session JDBC writes through to the
+		     database on each request, so sessions survive ANY restart. It
+		     reuses the app's existing DataSource, so on the default H2 file DB
+		     the session rows land beside the user rows with no extra service. -->
+		<dependency>
+			<groupId>org.springframework.session</groupId>
+			<artifactId>spring-session-jdbc</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
