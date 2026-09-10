@@ -5,7 +5,7 @@ import websocket
 import asyncio
 import uuid
 
-from threading import Lock, Thread
+from threading import Event, Lock, Thread
 from typing import Dict, List, Optional
 from core.config import Config
 from interfaces.ws_interface import WSInterface
@@ -42,7 +42,10 @@ class P2PManager(WSInterface):
         self.is_connected = False
         self.disconnected = False
         self.is_auto_reconnecting = False
-        self._suppress_auto_reconnect_once = False
+        # Auto-reconnect loop: at most one runs at a time (see _on_ws_close).
+        self._reconnect_lock = Lock()
+        self._reconnect_thread = None
+        self._reconnect_wake = Event()  # set to make the loop re-check its exit condition
         self.is_clipboard_monitoring_on = False
 
         # Fragment variables
@@ -139,7 +142,11 @@ class P2PManager(WSInterface):
 
     def get_total_timeout(self):
         """
-        Returns the total timeout value in milliseconds."""
+        Returns the total timeout value in milliseconds.
+        Upper bound on how long a disconnect() can take to settle: the reconnect loop
+        wakes immediately, but a connect attempt already in flight may run for
+        WEBSOCKET_TIMEOUT; the RECONNECT_WS_TIMER term keeps the tray countdown generous.
+        """
         return (RECONNECT_WS_TIMER * 1000) + WEBSOCKET_TIMEOUT
 
     def connect(self) -> tuple[bool, str]:
@@ -150,11 +157,9 @@ class P2PManager(WSInterface):
             if self.ws_client is not None:
                 if self.is_connected:
                     return True, ""
-                try:
-                    self.ws_client.close()
-                except Exception:
-                    pass
-                self.ws_client = None
+                self.ws_close()
+            if self.disconnected:
+                return False, "Websocket disconnected"
 
             self.ws_client = websocket.WebSocketApp(
                 url=self.config.data["websocket_url"],
@@ -191,7 +196,7 @@ class P2PManager(WSInterface):
                 time.sleep(0.25)
                 total_ms += 250
                 if 0 < WEBSOCKET_TIMEOUT < total_ms:
-                    self.ws_client.close()
+                    self.ws_close()
                     raise TimeoutError(
                         f"Connection to {self.config.data['websocket_url']} timed out"
                     )
@@ -207,13 +212,18 @@ class P2PManager(WSInterface):
             return False, msg
 
     def _on_ws_close(self, ws, *args):
-        self.ws_client = None
-        self.is_connected = False
-        if self._suppress_auto_reconnect_once:
-            self._suppress_auto_reconnect_once = False
-            return
-        # Auto Reconnect
-        if not self.is_login_phase and not self.disconnected:
+        # Runs on the closing socket's run_forever thread: for the live connection when it
+        # drops, and again for every attempt that fails inside run_forever (websocket-client
+        # tears down and fires on_close on a failed handshake too). Never block here.
+        with self._reconnect_lock:
+            if ws is not self.ws_client:
+                return  # a socket ws_close() already replaced or closed on purpose
+            self.ws_client = None
+            self.is_connected = False
+            if self.is_login_phase or self.disconnected:
+                return
+            if self._reconnect_thread is not None:
+                return  # a loop is already running; it re-checks is_connected
             self.is_auto_reconnecting = True
             if self.first_conn_lost:
                 self.notification_manager.notify(
@@ -221,13 +231,36 @@ class P2PManager(WSInterface):
                     message="Check your internet connection. Retrying...",
                 )
                 self.first_conn_lost = False
-            time.sleep(RECONNECT_WS_TIMER)  # seconds
+            self._reconnect_wake.clear()
+            self._reconnect_thread = Thread(
+                target=self._reconnect_loop, name="P2PReconnectThread", daemon=True
+            )
+            self._reconnect_thread.start()
+
+    def _reconnect_loop(self):
+        """
+        Retries connect() with a doubling delay (RECONNECT_WS_TIMER .. RECONNECT_WS_TIMER_MAX)
+        until connected or disconnect() is called. Exactly one loop exists at a time;
+        the exit check and _on_ws_close share a lock so a drop can never fall between them.
+        Outside the login phase connect() returns before the socket opens, so the delay
+        doubles per attempt and _on_ws_open wakes the loop to exit on success.
+        """
+        delay = RECONNECT_WS_TIMER
+        while True:
+            with self._reconnect_lock:
+                if self.disconnected or self.is_connected:
+                    self._reconnect_thread = None
+                    self.is_auto_reconnecting = False
+                    return
+            if self._reconnect_wake.wait(delay):
+                self._reconnect_wake.clear()  # disconnect()/_on_ws_open asked for a re-check
+                continue
             self.connect()
+            delay = min(delay * 2, RECONNECT_WS_TIMER_MAX)
 
     def manual_reconnect(self):
         if not self.is_auto_reconnecting:
             self.disconnected = False
-            self._suppress_auto_reconnect_once = self.ws_client is not None
             self.ws_close()
             self.is_connected = False
             self.connect()
@@ -294,6 +327,7 @@ class P2PManager(WSInterface):
 
             self.is_connected = True
             self.is_auto_reconnecting = False
+            self._reconnect_wake.set()  # let a running reconnect loop exit now
             self.loop.call_soon_threadsafe(self._restart_dc_heartbeat)
             if not self.first_conn_lost:
                 self.first_conn_lost = True
@@ -319,9 +353,11 @@ class P2PManager(WSInterface):
             logging.error(f"Failed to send websocket message: {e}")
 
     def ws_close(self):
-        if self.ws_client is not None:
-            self.ws_client.close()
-            self.ws_client = None
+        # Detach before closing: the close callback arrives on another thread and must
+        # see this socket as no longer current (see _on_ws_close).
+        ws_client, self.ws_client = self.ws_client, None
+        if ws_client is not None:
+            ws_client.close()
 
     def disconnect(self):
         self.schedule_task(self._disconnect())
@@ -336,6 +372,7 @@ class P2PManager(WSInterface):
             self.clipboard_manager.previous_clipboard_hash = 0
             self.disconnected = True
             self.first_conn_lost = True
+            self._reconnect_wake.set()  # stop a pending auto-reconnect right away
 
             # Close the websocket
             try:
