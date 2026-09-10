@@ -34,12 +34,13 @@ class Client:
         self.errorCallback = None
 
     def _connect(self, timeout=0):
+        run_kw = {
+            "ping_interval": STOMP_WS_PING_INTERVAL_SEC,
+            "ping_timeout": STOMP_WS_PING_TIMEOUT_SEC,
+        }
         if self._ws_sslopt:
-            thread = Thread(
-                target=lambda: self.ws.run_forever(sslopt=self._ws_sslopt)
-            )
-        else:
-            thread = Thread(target=self.ws.run_forever)
+            run_kw["sslopt"] = self._ws_sslopt
+        thread = Thread(target=self.ws.run_forever, kwargs=run_kw)
         thread.daemon = True
         thread.start()
 
